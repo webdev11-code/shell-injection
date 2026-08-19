@@ -397,6 +397,20 @@ fungsinya setara dengan CLI.
 > Catatan: jika `requests` tidak terpasang, tool otomatis fallback ke
 > `urllib` bawaan Python.
 
+## Testing
+
+Test suite (stdlib `unittest`, offline — semua berjalan di server HTTP lokal):
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+Cakupan: helper & encoding, `Report`/`ScanLogger`, helper HTTP (requests +
+fallback urllib), `FormParser`/`crawl_forms`, command injection (deteksi +
+exploit + time-based), SQLi (error/boolean/time, UNION dump, blind extract),
+XSS/SSTI/LFI/open redirect/CORS/CRLF, dan HTTP Request Smuggling
+(CL.TE/TE.CL/TE.TE).
+
 ## Status & catatan pengembangan
 
 - Mesin SQLi vendored (`zqrya_exploit/tools/dbstrike/`) sudah di-rebrand penuh
