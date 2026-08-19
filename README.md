@@ -23,6 +23,7 @@
 <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-2ea44f?style=for-the-badge">
 <img src="https://img.shields.io/badge/UI-CLI%20%2B%20GUI%20(Tkinter)-8B5CF6?style=for-the-badge">
 <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge">
+<img src="https://img.shields.io/badge/Author-PiuPiuu-ec4899?style=for-the-badge">
 <br>
 <img src="https://img.shields.io/badge/Exploits-RCE%E2%80%A2SQLi%E2%80%A2XSS%E2%80%A2SSTI%E2%80%A2SSRF%E2%80%A2LFI%E2%80%A2XXE-e11d48?style=for-the-badge">
 <img src="https://img.shields.io/badge/WAF%20Bypass-Encoding%20%2B%20Tamper%20%2B%20Impersonate-22d3ee?style=for-the-badge">
@@ -670,3 +671,5 @@ Pengguna bertanggung jawab penuh atas penggunaan tool ini.
 ---
 
 *Zqrya-Exploit — dibangun untuk pengujian keamanan yang etis. Jangan disalahgunakan.*
+
+**Author**: [PiuPiuu](https://github.com/webdev11-code/shell-injection)
