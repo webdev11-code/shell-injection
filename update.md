@@ -37,7 +37,7 @@ Arah kerja yang sudah disepakati:
 - [ ] Jalankan script rebrand ke seluruh file teks dbstrike.
 - [ ] Perbaiki referensi modul/engine stale (`import sqlmap` → `import dbstrike`, dst.).
 - [ ] Verifikasi engine tetap jalan.
-- [ ] Update integrasi level-atas (`core.py`, launcher `zq-dbstrike`) + README/docs.
+- [ ] Update integrasi level-atas (`core.py`, launcher `zq-dbstrike.py`) + README/docs.
 - [ ] Bersihkan file sampah + commit.
 
 ## Checklist Lanjutan (langkah per langkah)
@@ -132,9 +132,9 @@ Opsional: jalankan sebagian test suite (`python3 -m pytest tests/test_library.py
 
 - `zqrya_exploit/core.py` — komentar `"ala sqlmap dasar"` (baris ±1287) → ganti
   referensi ke `zyra-sqli`. Entri `EXTERNAL_TOOLS` tetap `dbstrike` (launcher
-  `tools/bin/zq-dbstrike` tidak berubah).
-- `zqrya_exploit/tools/bin/zq-dbstrike` — banner/komentar sudah "dbstrike engine",
-  boleh disesuaikan jadi "zyra-sqli engine" bila mau.
+  `tools/bin/zq-dbstrike.py`).
+- `zqrya_exploit/tools/bin/zq-dbstrike.py` — launcher lintas-platform mesin
+  zyra-sqli (menggantikan bash `zq-dbstrike` agar jalan di Windows & Linux).
 - `README.md` — sesuaikan sebutan mesin `dbstrike` → `zyra-sqli` (opsional),
   dan catat file `update.md`.
 
