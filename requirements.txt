@@ -1,1 +1,6 @@
 requests>=2.31.0
+
+# Opsional (tool tetap jalan tanpa ini, fitur terkait saja yang nonaktif):
+#   curl_cffi     -> --impersonate (impersonasi TLS/HTTP2 ala browser)
+#   cryptography  -> --mitm (HTTPS MITM) + brute-force key Shiro (URLDNS gadget)
+#   PyYAML        -> --poc dengan file .yaml/.yml (format PoC YAML)

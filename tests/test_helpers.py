@@ -41,15 +41,36 @@ class TestEncodeInjection(unittest.TestCase):
 
 class TestRender(unittest.TestCase):
     def test_all_placeholders(self):
-        out = core.render("M=@@M@@ S=@@S@@ E=@@E@@ D=@@D@@ H=@@H@@ X=@@XC@@ C=@@C@@",
+        out = core.render("M=@@M@@ S=@@S@@ E=@@E@@ D=@@D@@ H=@@H@@ X=@@XC@@ B=@@B@@ C=@@C@@",
                           marker="M1", start="S1", end="E1", delay=3,
-                          hexcmd="6869", xesc="\\x68", cmd="id")
-        self.assertEqual(out, "M=M1 S=S1 E=E1 D=3 H=6869 X=\\x68 C=id")
+                          hexcmd="6869", xesc="\\x68", b64="aWQ=", cmd="id")
+        self.assertEqual(out, "M=M1 S=S1 E=E1 D=3 H=6869 X=\\x68 B=aWQ= C=id")
 
     def test_cmd_last(self):
         # cmd diganti paling akhir: isi cmd tidak boleh kena placeholder lain
         out = core.render("@@C@@", cmd="@@M@@")
         self.assertEqual(out, "@@M@@")
+
+
+class TestTamper(unittest.TestCase):
+    def test_tamper_variants(self):
+        self.assertEqual(core.tamper_variants("none"), ["none"])
+        self.assertEqual(core.tamper_variants("hpp"), ["hpp"])
+        self.assertEqual(core.tamper_variants("whitespace"), ["whitespace"])
+        self.assertEqual(core.tamper_variants("ifsvars"), ["ifsvars"])
+        self.assertEqual(core.tamper_variants("all"),
+                         ["none", "whitespace", "ifsvars", "hpp"])
+
+    def test_tamper_whitespace(self):
+        self.assertEqual(core.tamper_injection("; echo X", "whitespace"),
+                         ";\techo\tX")
+
+    def test_tamper_ifsvars(self):
+        self.assertEqual(core.tamper_injection("; echo X", "ifsvars"),
+                         ";${IFS}echo${IFS}X")
+
+    def test_tamper_unknown_passthrough(self):
+        self.assertEqual(core.tamper_injection("; echo X", "bogus"), "; echo X")
 
 
 class TestRandomMarker(unittest.TestCase):

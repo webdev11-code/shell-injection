@@ -92,6 +92,20 @@ class TestScanLogger(unittest.TestCase):
         q.put("x")  # tidak boleh raise
         q.finding("t", "d")
 
+    def test_put_ignores_marker_tuples_in_report(self):
+        # Marker kontrol GUI (("__done__",)) harus tetap sampai ke sink tapi
+        # TIDAK mencemari report.lines — kalau tidak, to_txt/to_html crash.
+        report = core.Report("http://x/")
+        sink = []
+        q = core.ScanLogger(report=report, sink=sink.append)
+        q.put("[*] mulai")
+        q.put(("__done__",))
+        self.assertEqual(report.lines, ["[*] mulai"])
+        self.assertEqual(sink[-1], ("__done__",))
+        report.finish()
+        self.assertIn("[*] mulai", report.to_txt())
+        self.assertIn("[*] mulai", report.to_html())
+
 
 if __name__ == "__main__":
     unittest.main()
