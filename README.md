@@ -68,6 +68,10 @@ ilegal.
 - **Scan XXE**: entity eksternal -> callback OOB.
 - **Scan Open Redirect**: deteksi lewat header `Location`.
 - **Scan CORS & CRLF** (`--mode headers`): ACAO reflect + credentials, header injection.
+- **Scan HTTP Request Smuggling** (`--mode smuggling`): deteksi desync
+  framing CL.TE / TE.CL / TE.TE antara front-end (proxy/CDN) dan back-end
+  via timing differential (probe CL+TE bertentangan, tiap positif dikonfirmasi
+  3 koneksi berturut-turut agar minim false positive).
 - **Scan File Sensitif**: `/.env`, `/.git/config`, `phpinfo.php`, `actuator`, dll.
 - **Scan SSTI**: payload `{{7*7}}`, `${7*7}`, `<%= 7*7 %>`, dst.; deteksi lewat `49`.
 - **Scan SSRF**: callback OOB ke listener HTTP lokal.
@@ -385,7 +389,8 @@ tabel findings + log).
 
 **GUI** — klik tombol **Save Report** setelah scan selesai, pilih lokasi dan
 format (`.html`, `.txt` atau `.json`). GUI juga punya dropdown **Mode**
-(all/injection/sqli/ssti/ssrf/xss/directory/oob/recon), tombol **Run Scan
+(all/injection/sqli/ssti/ssrf/xss/lfi/xxe/redirect/headers/smuggling/directory/oob/recon),
+tombol **Run Scan
 (Mode)**, **SQLi Dump**, **Run Command (Inject)**, dan **Encoding** — jadi
 fungsinya setara dengan CLI.
 
