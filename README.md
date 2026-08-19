@@ -20,10 +20,40 @@ tipe kerentanan web: **command injection (RCE)**, **SQL injection (dump)**,
   mendeteksi dan **melewati** binari itu lalu memakai implementasi **native
   Python** (crt.sh + brute DNS, multi-vuln scan, dir fuzz internal) — semua
   tetap berfungsi, `--tools` menampilkan status mesin yang aktif.
+- **File besar diunduh terpisah (Git LFS).** `zq-radar` (±138 MB) disimpan via
+  Git LFS, jadi saat clone repo Anda mendapat *pointer*, bukan binary-nya.
+  Mesin itu baru bisa dipakai setelah diunduh — lihat "Mengunduh file besar"
+  di bawah.
 - `--listen` memakai `nc`/`ncat` bila ada; kalau tidak (sering di Windows),
   otomatis berganti ke **listener Python** bawaan (raw TCP).
 - BANNER & log non-ASCII dipaksa UTF-8 (`_fix_console()`), jadi aman di
   console Windows ber-codepage cp1252.
+
+## Mengunduh file besar (Git LFS)
+
+`zq-radar` disimpan di Git LFS (file ±138 MB). Setelah `git clone`, mesin radar
+masih berupa pointer dan **belum bisa dijalankan** sampai file aslinya diunduh.
+Dua cara:
+
+```bash
+# Cara 1 (CLI): tool mengunduh otomatis (butuh git-lfs, atau download langsung)
+python zqrya.py --cli --fetch-tools
+
+# Cara 2: manual dengan git-lfs
+git lfs pull
+
+# Cek status: mesin yang belum punya file akan ditandai "[LFS]"
+python zqrya.py --cli --tools
+```
+
+- Di **GUI**: tombol **"Fetch Tools (LFS)"** di panel *Mesin Tools* melakukan
+  unduhan yang sama.
+- Jika tanpa `git-lfs`, tool tetap bisa mengunduh langsung dari GitHub
+  (LFS batch API, murni `urllib`).
+- Saat mesin yang belum diunduh dipakai (`--radar`, tombol GUI, dsb.), tool
+  menampilkan peringatan jelas dan meminta `--fetch-tools` dulu.
+- Windows tidak memerlukan `zq-radar` (pakai fallback Python), jadi download
+  ini khusus untuk pengguna Linux yang ingin mesin radar asli.
 
 ## Installasi (package + launcher `zqrya`)
 
@@ -212,6 +242,12 @@ Ambil payload dari repo:
 
 ```bash
 python zqrya.py --cli --update-payloads
+```
+
+Unduh file besar (Git LFS) yang dibutuhkan mesin tool:
+
+```bash
+python zqrya.py --cli --fetch-tools
 ```
 
 Atur kecepatan scan (thread paralel):
