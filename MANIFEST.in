@@ -1,0 +1,10 @@
+include README.md
+include requirements.txt
+include zqrya_exploit/wordlist.txt
+recursive-include zqrya_exploit/tools *
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+prune zqrya_exploit/tools/dbstrike/.git
+prune zqrya_exploit/tools/dbstrike/tests
+prune zqrya_exploit/tools/dbstrike/doc

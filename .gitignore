@@ -1,0 +1,23 @@
+# Python / build
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+*.whl
+
+# Env virtual
+.venv/
+venv/
+env/
+
+# Data user / output
+payloads/*
+reports/*
+!payloads/.gitkeep
+!reports/.gitkeep
+
+# Log & artifacts
+*.log
+.DS_Store
